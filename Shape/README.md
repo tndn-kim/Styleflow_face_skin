@@ -189,6 +189,45 @@ testing_set/        평가용 — 클래스당 약 200장
 
 ---
 
+## 모델 학습 및 테스트 결과
+## Face Shape Classification Test Results
+
+### Overall Performance
+
+| Metric         |          Score |
+| -------------- | -------------: |
+| Top-1 Accuracy | 0.7364 / 73.6% |
+| Top-2 Accuracy | 0.8994 / 89.9% |
+| Total Samples  |            994 |
+
+> Top-2 Accuracy indicates the percentage of samples where the correct label is included in the top 2 predicted candidates.
+
+### Classification Report
+
+| Class            | Precision |   Recall | F1-score | Support |
+| ---------------- | --------: | -------: | -------: | ------: |
+| heart            |      0.75 |     0.62 |     0.68 |     199 |
+| oblong           |      0.84 |     0.92 |     0.88 |     200 |
+| oval             |      0.65 |     0.68 |     0.67 |     196 |
+| round            |      0.70 |     0.67 |     0.68 |     199 |
+| square           |      0.74 |     0.79 |     0.76 |     200 |
+| **Accuracy**     |           |          | **0.74** | **994** |
+| **Macro Avg**    |  **0.73** | **0.74** | **0.73** | **994** |
+| **Weighted Avg** |  **0.74** | **0.74** | **0.73** | **994** |
+
+### Confusion Matrix
+
+Rows represent the actual labels, and columns represent the predicted labels.
+
+| Actual \ Predicted | heart | oblong | oval | round | square |
+| ------------------ | ----: | -----: | ---: | ----: | -----: |
+| heart              |   124 |     14 |   37 |    17 |      7 |
+| oblong             |     7 |    183 |    9 |     1 |      0 |
+| oval               |    26 |     12 |  134 |    14 |     10 |
+| round              |     7 |      2 |   18 |   133 |     39 |
+| square             |     2 |      7 |    7 |    26 |    158 |
+
+
 ## 6. 실행 방법
 
 ### V3 (현재 기본) — 모델 학습
