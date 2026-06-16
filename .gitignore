@@ -25,7 +25,6 @@ Shape/testing_set/
 # ── Feature caches (regenerable from datasets) ──────────────────────────────
 Skin/personal_color_pipeline/cache/
 Shape/train_pipeline3/features_cache.csv
-Shape/train_pipeline3/best_params.json
 
 # ── Skin/personal_color_pipeline/outputs: keep only the curated final
 #    summary; everything else regenerates by running train.py. ────────────
