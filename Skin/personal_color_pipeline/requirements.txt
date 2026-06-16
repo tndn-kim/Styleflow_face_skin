@@ -1,0 +1,11 @@
+# Core
+numpy>=1.24
+pandas>=2.0
+scikit-learn>=1.3
+opencv-python>=4.8
+mediapipe>=0.10
+tqdm>=4.65
+
+# Optional but recommended
+lightgbm>=4.0          # LGBMClassifier (faster, often best)
+scikit-image>=0.21     # CIEDE2000 ΔE (falls back to CIE76 without it)

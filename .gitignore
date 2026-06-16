@@ -1,0 +1,41 @@
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.Python
+venv/
+env/
+*.egg-info/
+
+# ── Claude Code / editor local settings ────────────────────────────────────
+.claude/
+.vscode/
+
+# ── Trained model artefacts (regenerable by re-running training scripts) ───
+*.pkl
+*.joblib
+face_landmarker.task
+
+# ── Image datasets (large, not source code — see README for source/links) ──
+Skin/release/
+Skin/original_images_facer_masks/
+Shape/face_shape/
+Shape/testing_set/
+
+# ── Feature caches (regenerable from datasets) ──────────────────────────────
+Skin/personal_color_pipeline/cache/
+Shape/train_pipeline3/features_cache.csv
+Shape/train_pipeline3/best_params.json
+
+# ── Skin/personal_color_pipeline/outputs: keep only the curated final
+#    summary; everything else regenerates by running train.py. ────────────
+Skin/personal_color_pipeline/outputs/*
+!Skin/personal_color_pipeline/outputs/final_report.md
+!Skin/personal_color_pipeline/outputs/final_report.json
+!Skin/personal_color_pipeline/outputs/training_report.txt
+!Skin/personal_color_pipeline/outputs/4class_classification_report.txt
+!Skin/personal_color_pipeline/outputs/4class_confusion_matrix.csv
+!Skin/personal_color_pipeline/outputs/warm_cool_classification_report.txt
+!Skin/personal_color_pipeline/outputs/warm_cool_confusion_matrix.csv
+!Skin/personal_color_pipeline/outputs/final_decision_policy_comparison.csv
+!Skin/personal_color_pipeline/outputs/final_decision_policy_comparison.json

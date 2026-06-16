@@ -1,0 +1,12 @@
+Best model: LightGBM
+
+              precision    recall  f1-score   support
+
+ autumn_warm       0.57      0.58      0.58       260
+ spring_warm       0.55      0.46      0.50       236
+ summer_cool       0.54      0.56      0.55       226
+ winter_cool       0.59      0.67      0.62       260
+
+    accuracy                           0.57       982
+   macro avg       0.57      0.56      0.56       982
+weighted avg       0.57      0.57      0.56       982
