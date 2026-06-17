@@ -98,7 +98,9 @@ def classify_from_landmarks(lms, w: int, h: int) -> "dict | None":
     ranked = sorted(probs.items(), key=lambda x: x[1], reverse=True)
     top_cls,    top_prob    = ranked[0]
     second_cls, second_prob = ranked[1]
-    low_conf = top_prob < CONF_THRESHOLD
+    # numpy.bool_은 json.dumps가 bool로 인식하지 못해 "True"/"False" 문자열로
+    # 직렬화되는 문제가 있어, 반환 전 native python bool로 캐스팅한다.
+    low_conf = bool(top_prob < CONF_THRESHOLD)
 
     probs_ko = {_KO[c]: round(float(probs.get(c, 0.0)), 4) for c in classes}
 

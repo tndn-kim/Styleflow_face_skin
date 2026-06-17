@@ -97,6 +97,69 @@ def _angle_3pt(p1, vertex, p2):
     return float(np.degrees(np.arccos(np.clip(np.dot(v1, v2) / (n1 * n2), -1.0, 1.0))))
 
 
+# ── 삼정(三停) 비율 판별 — 학습 불필요, 순수 기하 계산 ─────────
+# 상안부(헤어라인→눈썹) : 중안부(눈썹→코끝) : 하안부(코끝→턱)
+# 가장 짧은 구간을 1.0으로 두고 나머지 두 구간의 비율을 본다.
+# 소수점 단위로 엄격하게 비교하지 않고, tolerance 이내 차이는 "같다"고
+# 판단한다 (예: 1.02와 1.03은 같은 길이로 취급).
+SAMJEONG_TOLERANCE = 0.05  # 이 값 이하 차이는 "비슷하다"고 판단
+
+
+def classify_samjeong(sam_upper: float, sam_mid: float, sam_lower: float,
+                      tolerance: float = SAMJEONG_TOLERANCE) -> dict:
+    """
+    삼정 비율(최단 구간=1.0 기준)을 받아 어느 구간이 "긴 편"인지 판별.
+
+    동작:
+      1. 가장 긴 구간의 값이 1.0과 tolerance 이내로 가깝다
+         → 세 구간 모두 비슷한 길이 ("균형")
+      2. 그렇지 않으면, 최댓값과 tolerance 이내로 가까운 구간들을
+         "긴 편"으로 묶는다 (1개 또는 2개가 될 수 있음)
+
+    Returns
+    -------
+    {
+        "ratios":     {"상안부": 1.0, "중안부": 1.12, "하안부": 1.43},
+        "longest":    "하안부",                 # 단순 최댓값 (참고용)
+        "long_parts": ["하안부"],                # tolerance 적용 후 "긴 편" 목록
+        "balance":    "하안부가 긴 편",          # 사람이 읽을 요약 문구
+        "is_balanced": False,
+    }
+    """
+    vals = {"상안부": sam_upper, "중안부": sam_mid, "하안부": sam_lower}
+    ranked = sorted(vals.items(), key=lambda x: x[1], reverse=True)
+    top_name, top_val = ranked[0]
+
+    # 최댓값조차 기준(1.0)과 거의 차이 없으면 셋 다 비슷한 길이
+    if top_val - 1.0 <= tolerance:
+        return {
+            "ratios": vals, "longest": top_name,
+            "long_parts": [], "balance": "균형 (상·중·하안부 비슷)",
+            "is_balanced": True,
+        }
+
+    # 최댓값 기준으로 tolerance 이내에 들어오는 구간들을 "긴 편"으로 묶음
+    long_parts = [top_name]
+    for name, val in ranked[1:]:
+        if top_val - val <= tolerance:
+            long_parts.append(name)
+        else:
+            break
+
+    if len(long_parts) >= 3:
+        balance, long_parts, is_balanced = "균형 (상·중·하안부 비슷)", [], True
+    elif len(long_parts) == 2:
+        balance, is_balanced = f"{long_parts[0]}·{long_parts[1]}가 긴 편", False
+    else:
+        balance, is_balanced = f"{long_parts[0]}가 긴 편", False
+
+    return {
+        "ratios": vals, "longest": top_name,
+        "long_parts": long_parts, "balance": balance,
+        "is_balanced": is_balanced,
+    }
+
+
 # ── 눈썹 중심 계산 ─────────────────────────────────────────
 def detect_brow_center(landmarks, w: int, h: int) -> tuple:
     left_ids  = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46]
@@ -231,17 +294,20 @@ def compute_ratios(coords: dict, img_w: int, img_h: int,
     # R2: 이마너비 / 턱너비  (너비 테이퍼, 역삼각형 핵심)
     out["R2_forehead_jaw"]    = round(forehead_w / jaw_w,    3) if jaw_w   else None
 
-    # 삼정 비율 (시각화용, 피처 아님)
+    # 삼정 비율 — 학습 불필요, 순수 기하 계산 (시각화/진단용, ML 피처 아님)
     if "brow_center" in coords:
         up  = abs(coords["brow_center"][1] - coords["hairline"][1])
         mid = abs(coords["nose_tip"][1]    - coords["brow_center"][1])
         lo  = abs(coords["chin"][1]        - coords["nose_tip"][1])
         base = min(up, mid, lo)
         if base:
-            out["sam_upper"]   = round(up  / base, 3)
-            out["sam_mid"]     = round(mid / base, 3)
-            out["sam_lower"]   = round(lo  / base, 3)
-            out["sam_longest"] = ["상안부","중안부","하안부"][[up,mid,lo].index(max(up,mid,lo))]
+            sam_upper = round(up  / base, 3)
+            sam_mid   = round(mid / base, 3)
+            sam_lower = round(lo  / base, 3)
+            out["sam_upper"] = sam_upper
+            out["sam_mid"]   = sam_mid
+            out["sam_lower"] = sam_lower
+            out["samjeong"]  = classify_samjeong(sam_upper, sam_mid, sam_lower)
 
     # R3: jaw_left–chin–jaw_right 각도  (턱 각도, 작을수록 역삼각형·클수록 각진형)
     R3 = _angle_3pt(coords["jaw_left"], coords["chin"], coords["jaw_right"])
@@ -374,12 +440,17 @@ def detect_landmarks(image_path: str, output_path: str | None = "output.jpg"):
         f"R9:{ratios.get('R9_chin_taper','?')}",
     ]
 
+    if "samjeong" in ratios:
+        sj = ratios["samjeong"]
+        overlay.append(f"삼정: {sj['balance']}")
+
     try:
-        from shape_classification import classify_from_ratios as _clf
-        cls = _clf(ratios)
+        import sys as _sys
+        _sys.path.insert(0, os.path.join(os.path.dirname(__file__), "train_pipeline3"))
+        from shape_classification import classify_from_landmarks as _clf
+        cls = _clf(lms, w, h)
         if cls:
-            prob = max(cls["probabilities"].values()) if cls.get("probabilities") else 0
-            overlay.append(f"얼굴형: {cls['face_shape']} ({prob:.0%})")
+            overlay.append(f"얼굴형: {cls['face_shape']} ({cls['confidence']:.0%})")
     except Exception:
         pass
 
@@ -395,9 +466,16 @@ def detect_landmarks(image_path: str, output_path: str | None = "output.jpg"):
     print("\n--- 랜드마크 좌표 ---")
     for name, pt in coords.items():
         print(f"  {name:25s}: {pt}")
-    print("\n--- 비율 결과 (R1~R6) ---")
+    print("\n--- 비율 결과 (R1~R9) ---")
     for k, v in ratios.items():
+        if k == "samjeong":
+            continue
         print(f"  {k:30s}: {v}")
+    if "samjeong" in ratios:
+        sj = ratios["samjeong"]
+        print(f"\n--- 삼정 (상안부:중안부:하안부 = "
+              f"{sj['ratios']['상안부']}:{sj['ratios']['중안부']}:{sj['ratios']['하안부']}) ---")
+        print(f"  판정: {sj['balance']}")
 
     return coords, ratios
 
