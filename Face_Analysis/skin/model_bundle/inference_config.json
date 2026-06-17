@@ -1,0 +1,6 @@
+{
+  "white_balance": "none",
+  "final_policy": "margin_pairwise",
+  "model_name": "LightGBM",
+  "label_mode": "4class"
+}

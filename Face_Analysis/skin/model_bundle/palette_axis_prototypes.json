@@ -1,0 +1,30 @@
+{
+  "Autumn": {
+    "axis_light_dark": 50.32111111111111,
+    "axis_warm_cool": 28.66044444444444,
+    "axis_clear_muted": 38.61066666666667,
+    "axis_contrast": 81.08,
+    "n_colors": 45
+  },
+  "Spring": {
+    "axis_light_dark": 67.68083333333333,
+    "axis_warm_cool": 22.265666666666668,
+    "axis_clear_muted": 41.29683333333334,
+    "axis_contrast": 87.44200000000001,
+    "n_colors": 60
+  },
+  "Summer": {
+    "axis_light_dark": 68.66142857142857,
+    "axis_warm_cool": -2.0097619047619055,
+    "axis_clear_muted": 16.213333333333335,
+    "axis_contrast": 37.3965,
+    "n_colors": 42
+  },
+  "Winter": {
+    "axis_light_dark": 46.534406779661026,
+    "axis_warm_cool": -3.954576271186441,
+    "axis_clear_muted": 37.48949152542373,
+    "axis_contrast": 98.088,
+    "n_colors": 59
+  }
+}
