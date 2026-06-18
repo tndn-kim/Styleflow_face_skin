@@ -47,6 +47,8 @@ def load_model_bundle(bundle_dir: str | Path = _DEFAULT_BUNDLE) -> dict:
 
     palette_protos = load_prototypes(bundle_dir / "palette_prototypes.json")
     axis_protos    = load_axis_prototypes(bundle_dir / "palette_axis_prototypes.json")
+    palette_protos_4c = load_prototypes(bundle_dir / "palette_prototypes_4class.json")
+    axis_protos_4c    = load_axis_prototypes(bundle_dir / "palette_axis_prototypes_4class.json")
 
     specialists: dict = {}
     spec_dir = bundle_dir / "pairwise_specialists"
@@ -73,6 +75,8 @@ def load_model_bundle(bundle_dir: str | Path = _DEFAULT_BUNDLE) -> dict:
         "label_mapping":     label_mapping,
         "palette_prototypes": palette_protos,
         "axis_prototypes":   axis_protos,
+        "palette_prototypes_4class": palette_protos_4c,
+        "axis_prototypes_4class":   axis_protos_4c,
         "specialists":       specialists,
         "wc_bundle":         wc_bundle,
         "thresholds":        thresholds,
@@ -108,6 +112,8 @@ def predict_personal_color(
     df_one = pd.DataFrame([feats])
     df_one = add_palette_distances(df_one, bundle["palette_prototypes"])
     df_one = add_axis_distances(df_one, bundle["axis_prototypes"])
+    df_one = add_palette_distances(df_one, bundle["palette_prototypes_4class"])
+    df_one = add_axis_distances(df_one, bundle["axis_prototypes_4class"])
 
     feature_cols = bundle["feature_cols"]
     X = df_one.reindex(columns=feature_cols).values.astype(np.float32)

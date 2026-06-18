@@ -146,6 +146,79 @@ def _extract_lip_roi(
     return pix, ([hull] if hull is not None else [])
 
 
+# ─── Sclera-based white balance (per-photo, landmark-driven) ─────────────────
+
+def _hull_mask(image_shape: tuple[int, int], landmarks, indices: list[int]) -> np.ndarray:
+    h, w = image_shape[:2]
+    pts = [list(_lm_xy(landmarks, i, w, h)) for i in indices if i < len(landmarks)]
+    mask = np.zeros((h, w), dtype=np.uint8)
+    if len(pts) < 3:
+        return mask
+    hull = cv2.convexHull(np.array(pts, dtype=np.int32))
+    cv2.fillPoly(mask, [hull], 255)
+    return mask
+
+
+def _get_sclera_pixels(
+    image_rgb: np.ndarray, lms,
+    bright_pct: float = 70.0, sat_pct: float = 40.0, min_keep: int = 15,
+) -> Optional[np.ndarray]:
+    """
+    Candidate = eye-opening hull minus iris hull, then keep only the
+    brightest / least-saturated subset (real sclera is bright and close to
+    neutral; eyelid skin, eyelashes and shadow inside the same hull are
+    darker/more saturated and would bias a naive average).
+    """
+    eye_mask  = np.zeros(image_rgb.shape[:2], dtype=np.uint8)
+    iris_mask = np.zeros(image_rgb.shape[:2], dtype=np.uint8)
+    for idx in (_LEFT_EYE, _RIGHT_EYE):
+        eye_mask |= _hull_mask(image_rgb.shape, lms, idx)
+    for idx in (_LEFT_IRIS, _RIGHT_IRIS):
+        iris_mask |= _hull_mask(image_rgb.shape, lms, idx)
+    kernel = np.ones((3, 3), np.uint8)
+    eye_mask  = cv2.erode(eye_mask, kernel, iterations=1)
+    iris_mask = cv2.dilate(iris_mask, kernel, iterations=2)
+    cand = image_rgb[(eye_mask > 0) & (iris_mask == 0)].astype(np.float32)
+    if len(cand) < min_keep:
+        return None
+
+    brightness = cand.mean(axis=1)
+    cmax, cmin = cand.max(axis=1), cand.min(axis=1)
+    saturation = (cmax - cmin) / (cmax + 1e-6)
+
+    keep = (brightness >= np.percentile(brightness, bright_pct)) & \
+           (saturation  <= np.percentile(saturation, sat_pct))
+    filtered = cand[keep]
+    if len(filtered) < min_keep:
+        filtered = cand[brightness >= np.percentile(brightness, 90)]
+    return filtered if len(filtered) >= min_keep else None
+
+
+def apply_sclera_white_balance(image_rgb: np.ndarray, lms) -> Optional[np.ndarray]:
+    """
+    Estimate the photo's ambient-light colour cast from the sclera (should be
+    neutral gray) and apply the inverse correction to the whole image.
+
+    More robust to face-crop colour bias than gray-world (which averages the
+    whole image, dominated by skin pixels). Returns None if too few clean
+    sclera pixels were found (caller should fall back to the uncorrected
+    image rather than crash or apply a bogus correction).
+    """
+    sclera_pix = _get_sclera_pixels(image_rgb, lms)
+    if sclera_pix is None:
+        return None
+
+    img = image_rgb.astype(np.float32)
+    mean_r, mean_g, mean_b = sclera_pix.mean(axis=0)
+    overall = (mean_r + mean_g + mean_b) / 3.0
+    if overall < 1e-6:
+        return None
+    img[:, :, 0] *= overall / (mean_r + 1e-6)
+    img[:, :, 1] *= overall / (mean_g + 1e-6)
+    img[:, :, 2] *= overall / (mean_b + 1e-6)
+    return np.clip(img, 0, 255).astype(np.uint8)
+
+
 # ─── Region colour statistics (Phase 1, preserved) ────────────────────────────
 
 _STAT_KEYS = [
@@ -334,6 +407,13 @@ def extract_features_from_image(
         return None
     lms = result.face_landmarks[0]
 
+    if wb == "sclera":
+        corrected = apply_sclera_white_balance(img_rgb, lms)
+        if corrected is not None:
+            img_rgb = corrected
+        # else: too few clean sclera pixels (closed eyes, glasses glare,
+        # low res) — fall back to the uncorrected image rather than fail.
+
     skin_pix, _ = _extract_skin_roi(img_rgb, lms)
     hair_pix, _ = _extract_hair_roi(img_rgb, lms)
     eye_pix,  _ = _extract_eye_roi(img_rgb, lms)
@@ -395,6 +475,11 @@ def extract_rois_for_debug(
         return img_rgb, {}
 
     lms = result.face_landmarks[0]
+    if wb == "sclera":
+        corrected = apply_sclera_white_balance(img_rgb, lms)
+        if corrected is not None:
+            img_rgb = corrected
+
     _, skin_hulls = _extract_skin_roi(img_rgb, lms)
     _, hair_hulls = _extract_hair_roi(img_rgb, lms)
     _, eye_hulls  = _extract_eye_roi(img_rgb, lms)
@@ -470,12 +555,17 @@ def build_person_features(
 
     # Check if cache is valid (has Phase 2 columns)
     if cache.exists() and not no_cache:
-        df = pd.read_csv(cache)
-        if "skin_valid_pixels" in df.columns:
-            print(f"[cache] Loading {len(df)} samples from {cache}")
-            return df
-        else:
-            print(f"[cache] Cache missing Phase 2 features — re-extracting.")
+        try:
+            df = pd.read_csv(cache)
+        except pd.errors.EmptyDataError:
+            df = None
+            print(f"[cache] Cache file is empty/corrupt — re-extracting.")
+        if df is not None:
+            if "skin_valid_pixels" in df.columns:
+                print(f"[cache] Loading {len(df)} samples from {cache}")
+                return df
+            else:
+                print(f"[cache] Cache missing Phase 2 features — re-extracting.")
 
     image_dir = Path(image_dir)
     all_images = sorted(
@@ -527,17 +617,25 @@ def build_person_features(
 # ─── Palette distance augmentation (Phase 1, preserved) ──────────────────────
 
 def add_palette_distances(df: pd.DataFrame, prototypes: dict) -> pd.DataFrame:
-    """Append dist_to_<season> columns (Phase 1 Lab/HSV/hue distances)."""
-    from config import PALETTE_DISTANCE_WEIGHTS, SEASON_LABELS
+    """Append dist_to_<season> columns (Phase 1 Lab/HSV/hue distances).
+
+    Season labels are taken from `prototypes["season"]`'s own keys (not the
+    hardcoded config.SEASON_LABELS), so this works correctly both for the
+    original Spring/Summer/Autumn/Winter prototypes and for the 4-class
+    (spring_warm/summer_cool/...) prototypes. Previously this always looped
+    over SEASON_LABELS regardless of which prototypes dict was passed in, so
+    calling it a second time with 4-class prototypes (whose keys never match
+    SEASON_LABELS) silently overwrote the first call's valid dist_to_* columns
+    with NaN.
+    """
+    from config import PALETTE_DISTANCE_WEIGHTS
 
     season_protos = prototypes["season"]
+    season_labels = list(season_protos.keys())
     w = PALETTE_DISTANCE_WEIGHTS
     nan = float("nan")
 
-    for season in SEASON_LABELS:
-        if season not in season_protos:
-            df[f"dist_to_{season.lower()}"] = nan
-            continue
+    for season in season_labels:
         proto = season_protos[season]
         skin_lab  = df[["skin_mean_L", "skin_mean_a", "skin_mean_b"]].values.astype(float)
         proto_lab = np.array([[proto.get("mean_L", nan),
@@ -557,7 +655,7 @@ def add_palette_distances(df: pd.DataFrame, prototypes: dict) -> pd.DataFrame:
             + w["hsv"] * hsv_dist + w["hue"] * hue_dist
         )
 
-    dist_cols  = [f"dist_to_{s.lower()}" for s in SEASON_LABELS]
+    dist_cols  = [f"dist_to_{s.lower()}" for s in season_labels]
     dist_mat   = df[dist_cols].values.astype(float)
     min_dist   = np.nanmin(dist_mat, axis=1, keepdims=True)
     df["min_palette_dist"]   = min_dist.ravel()
@@ -571,8 +669,11 @@ def add_axis_distances(df: pd.DataFrame, axis_prototypes: dict) -> pd.DataFrame:
     """
     Append axis_euclidean_dist_to_<season> and axis_cosine_dist_to_<season>
     using person axis vector vs palette axis prototype vector.
+
+    Season labels are taken from `axis_prototypes`' own keys (not the
+    hardcoded config.SEASON_LABELS) — see add_palette_distances() for why.
     """
-    from config import SEASON_LABELS
+    season_labels = list(axis_prototypes.keys())
 
     _AXIS_COLS = [
         "axis_light_dark_score",
@@ -595,7 +696,7 @@ def add_axis_distances(df: pd.DataFrame, axis_prototypes: dict) -> pd.DataFrame:
 
     person_mat = df[_AXIS_COLS].values.astype(float)  # [N, 4]
 
-    for season in SEASON_LABELS:
+    for season in season_labels:
         proto = axis_prototypes.get(season, {})
         p_vec = np.array([proto.get(k, float("nan")) for k in _PROTO_KEYS], dtype=float)
 

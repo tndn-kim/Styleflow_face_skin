@@ -642,7 +642,7 @@ def run_white_balance_final_comparison(
     print(f"{'='*60}")
 
     rows = []
-    for wb in ["none", "gray_world"]:
+    for wb in ["none", "gray_world", "sclera"]:
         print(f"\n  -- white_balance={wb} --")
         df_wb = build_person_features(image_dir, no_cache=no_cache, wb=wb)
         df_wb = add_palette_distances(df_wb, prototypes_4c)
@@ -715,13 +715,17 @@ def run_white_balance_final_comparison(
     wb_df.to_csv(out, index=False)
 
     none_row = wb_df[wb_df.white_balance == "none"].iloc[0]
-    gw_row   = wb_df[wb_df.white_balance == "gray_world"].iloc[0]
-    if gw_row["margin_pairwise_macro_f1"] > none_row["margin_pairwise_macro_f1"]:
-        verdict = "gray_world improves margin_pairwise macro F1 -> consider as opt-in"
-    elif gw_row["warm_cool_accuracy"] > none_row["warm_cool_accuracy"]:
-        verdict = "gray_world reduces warm/cool error -> consider as opt-in, default stays none"
-    else:
-        verdict = "gray_world does not help -> keep none as default"
+    challenger_names = [c for c in ("gray_world", "sclera") if c in wb_df.white_balance.values]
+    verdicts = []
+    for name in challenger_names:
+        row = wb_df[wb_df.white_balance == name].iloc[0]
+        if row["margin_pairwise_macro_f1"] > none_row["margin_pairwise_macro_f1"]:
+            verdicts.append(f"{name} improves margin_pairwise macro F1 -> consider as opt-in")
+        elif row["warm_cool_accuracy"] > none_row["warm_cool_accuracy"]:
+            verdicts.append(f"{name} reduces warm/cool error -> consider as opt-in, default stays none")
+        else:
+            verdicts.append(f"{name} does not help -> keep none as default")
+    verdict = " | ".join(verdicts)
     print(f"\n  Verdict: {verdict}")
     print(f"[white_balance] Final comparison saved -> {out}")
     return wb_df

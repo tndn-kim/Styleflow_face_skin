@@ -31,7 +31,10 @@ from extract_person_features import (
     extract_features_from_image, _make_detector,
     add_palette_distances, add_axis_distances,
 )
-from extract_palette_features import load_prototypes_4class, load_axis_prototypes_4class
+from extract_palette_features import (
+    load_prototypes, load_axis_prototypes,
+    load_prototypes_4class, load_axis_prototypes_4class,
+)
 from pairwise_specialists import get_specialist, specialist_predict_row
 from warm_cool import get_warm_cool_probs
 from boundary import classify_boundary_type
@@ -51,6 +54,8 @@ def load_final_model_bundle(bundle_dir: str | Path) -> dict:
     with open(bundle_dir / "label_mapping.json", encoding="utf-8") as f:
         label_mapping = json.load(f)
 
+    proto  = load_prototypes(bundle_dir / "palette_prototypes.json")
+    axis   = load_axis_prototypes(bundle_dir / "palette_axis_prototypes.json")
     proto4 = load_prototypes_4class(bundle_dir / "palette_prototypes_4class.json")
     axis4  = load_axis_prototypes_4class(bundle_dir / "palette_axis_prototypes_4class.json")
 
@@ -77,6 +82,8 @@ def load_final_model_bundle(bundle_dir: str | Path) -> dict:
         "label_encoder":                 base["label_encoder"],
         "feature_cols":                  feature_cols,
         "label_mapping":                 label_mapping,
+        "palette_prototypes":            proto,
+        "palette_axis_prototypes":       axis,
         "palette_prototypes_4class":     proto4,
         "palette_axis_prototypes_4class": axis4,
         "specialists":                   specialists,
@@ -114,6 +121,11 @@ def predict_personal_color(
 
     feats["image_path"] = str(image_path)
     df_one = pd.DataFrame([feats])
+    # Mirror train.py's exact call order (original season prototypes, then
+    # 4-class prototypes) so the same column set the model was trained on
+    # — dist_to_spring.. AND dist_to_spring_warm.. — gets reproduced here.
+    df_one = add_palette_distances(df_one, bundle["palette_prototypes"])
+    df_one = add_axis_distances(df_one, bundle["palette_axis_prototypes"])
     df_one = add_palette_distances(df_one, bundle["palette_prototypes_4class"])
     df_one = add_axis_distances(df_one, bundle["palette_axis_prototypes_4class"])
 

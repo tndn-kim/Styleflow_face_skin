@@ -1,17 +1,17 @@
 Best model      : RandomForest
 Feature set     : all
-Accuracy        : 0.6955
-Macro F1        : 0.6954
-ROC-AUC         : 0.7534
-Brier score     : 0.2040
-Warm->Cool err  : 147
-Cool->Warm err  : 152
+Accuracy        : 0.6756
+Macro F1        : 0.6754
+ROC-AUC         : 0.7386
+Brier score     : 0.2100
+Warm->Cool err  : 124
+Cool->Warm err  : 131
 
               precision    recall  f1-score   support
 
-        cool       0.69      0.69      0.69       486
-        warm       0.70      0.70      0.70       496
+        cool       0.67      0.66      0.67       388
+        warm       0.68      0.69      0.68       398
 
-    accuracy                           0.70       982
-   macro avg       0.70      0.70      0.70       982
-weighted avg       0.70      0.70      0.70       982
+    accuracy                           0.68       786
+   macro avg       0.68      0.68      0.68       786
+weighted avg       0.68      0.68      0.68       786

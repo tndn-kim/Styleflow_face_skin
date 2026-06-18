@@ -1,6 +1,6 @@
 {
-  "white_balance": "none",
-  "final_policy": "margin_pairwise",
+  "white_balance": "sclera",
+  "final_policy": "base_4class",
   "model_name": "LightGBM",
   "label_mode": "4class"
 }

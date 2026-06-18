@@ -1,128 +1,95 @@
 ================================================================
   Palette-Aware Personal Color Classifier
-  Training Report  (2026-06-16 14:33)
+  Training Report  (2026-06-18 11:02)
 ================================================================
 
 [ Run Settings ]
   label_mode       : 4class
   target           : season
-  white_balance    : none
-  remove_shortcut  : none
+  white_balance    : sclera
+  remove_shortcut  : all
   model            : all
-  use_reranker     : True
-  train_pairwise   : False
+  use_reranker     : False
+  train_pairwise   : True
 
 [ Feature Count ]
-  Before shortcut removal : 118
-  After  shortcut removal : 118
-  Removed                 : 0
+  Before shortcut removal : 130
+  After  shortcut removal : 114
+  Removed                 : 16
 
 [ 4-class Baseline ]
-  Best model : LightGBM
-  Accuracy   : 0.5672
-  Macro  F1  : 0.5629
-  Top-2 Acc  : 0.8340
+  Best model : RandomForest
+  Accuracy   : 0.5479
+  Macro  F1  : 0.5421
+  Top-2 Acc  : 0.8035
 
 [ Per-Class Results ]
               precision    recall  f1-score   support
 
-         가을웜       0.57      0.58      0.58       260
-          봄웜       0.55      0.46      0.50       236
-         여름쿨       0.54      0.56      0.55       226
-         겨울쿨       0.59      0.67      0.62       260
+         가을웜       0.56      0.59      0.57       260
+          봄웜       0.53      0.49      0.51       236
+         여름쿨       0.51      0.45      0.48       226
+         겨울쿨       0.58      0.65      0.61       260
 
-    accuracy                           0.57       982
-   macro avg       0.57      0.56      0.56       982
-weighted avg       0.57      0.57      0.56       982
+    accuracy                           0.55       982
+   macro avg       0.54      0.54      0.54       982
+weighted avg       0.55      0.55      0.55       982
 
 [ Confusion Matrix (rows=True, cols=Pred) ]
              가을웜              봄웜             여름쿨             겨울쿨
-  가을웜                        150              27              20              63
-  봄웜                          41             108              60              27
-  여름쿨                         18              51             126              31
-  겨울쿨                         52               9              26             173
+  가을웜                        154              24              25              57
+  봄웜                          39             115              51              31
+  여름쿨                         31              59             101              35
+  겨울쿨                         52              20              20             168
 
 [ Pairwise Specialists ]
-  autumn_warm__winter_cool             F1=0.7006  Acc=0.7006  (SVM_RBF)
-  spring_warm__autumn_warm             F1=0.7857  Acc=0.7862  (LogisticRegression)
-  spring_warm__summer_cool             F1=0.6767  Acc=0.6791  (SVM_RBF)
-  spring_warm__winter_cool             F1=0.8417  Acc=0.8428  (SVM_RBF)
-  summer_cool__autumn_warm             F1=0.8027  Acc=0.8039  (LogisticRegression)
-  summer_cool__winter_cool             F1=0.8547  Acc=0.8553  (LogisticRegression)
-
-[ Reranker ]
-  Base     : Accuracy=0.5672  Macro F1=0.5629
-  Reranked : Accuracy=0.5672  Macro F1=0.5629
-  Changed  : 0  (Wrong->Correct: 0  Correct->Wrong: 0)
-  Best threshold: 0.20
-
-  Threshold sweep:
-    thr=0.00  acc=0.5672  f1=0.5629
-    thr=0.05  acc=0.5642  f1=0.5599
-    thr=0.10  acc=0.5713  f1=0.5672
-    thr=0.15  acc=0.5754  f1=0.5710
-    thr=0.20  acc=0.5754  f1=0.5711
+  spring_warm__summer_cool             F1=0.6749  Acc=0.6753  (LogisticRegression)
+  autumn_warm__winter_cool             F1=0.7387  Acc=0.7390  (ExtraTrees)
+  spring_warm__autumn_warm             F1=0.7950  Acc=0.7968  (LogisticRegression)
+  summer_cool__winter_cool             F1=0.8468  Acc=0.8477  (LightGBM)
+  spring_warm__winter_cool             F1=0.8441  Acc=0.8448  (LogisticRegression)
+  summer_cool__autumn_warm             F1=0.8079  Acc=0.8086  (RandomForest)
 
 ================================================================
 [ Summary ]
   [4-class baseline]
-    Best model    : LightGBM
-    Accuracy      : 0.5672
-    Macro F1      : 0.5629
-    Top-2 Acc     : 0.8340
+    Best model    : RandomForest
+    Accuracy      : 0.5479
+    Macro F1      : 0.5421
+    Top-2 Acc     : 0.8035
 
   [Shortcut removal]
-    Mode          : none
-    Features before : 118
-    Features after  : 118
+    Mode          : all
+    Features before : 130
+    Features after  : 114
 
   [Pairwise specialists]
-    autumn_warm vs winter_cool: F1=0.7006
-    spring_warm vs autumn_warm: F1=0.7857
-    spring_warm vs summer_cool: F1=0.6767
-    spring_warm vs winter_cool: F1=0.8417
-    summer_cool vs autumn_warm: F1=0.8027
-    summer_cool vs winter_cool: F1=0.8547
-
-  [Reranker]
-    Base accuracy    : 0.5672
-    Reranked accuracy: 0.5672
-    Base macro F1    : 0.5629
-    Reranked macro F1: 0.5629
-    Changed          : 0
-    Wrong->Correct   : 0
-    Correct->Wrong   : 0
-    Best threshold   : 0.20
+    spring_warm vs summer_cool: F1=0.6749
+    autumn_warm vs winter_cool: F1=0.7387
+    spring_warm vs autumn_warm: F1=0.7950
+    summer_cool vs winter_cool: F1=0.8468
+    spring_warm vs winter_cool: F1=0.8441
+    summer_cool vs autumn_warm: F1=0.8079
 
 [ 5th Stage Summary ]
 
   Base 4-class:
-    Accuracy        : 0.5672
-    Macro F1        : 0.5629
-    Top-2 Acc       : 0.8340
-    Warm/Cool Acc   : 0.6955
-    Warm/Cool Errors: W->C=147  C->W=152
+    Accuracy        : 0.5479
+    Macro F1        : 0.5421
+    Top-2 Acc       : 0.8035
+    Warm/Cool Acc   : 0.6925
+    Warm/Cool Errors: W->C=156  C->W=146
 
   Margin Pairwise Reranker:
-    Accuracy        : 0.5703
-    Macro F1        : 0.5662
-    Changed         : 40
-    Wrong -> Correct: 19
-    Correct -> Wrong: 16
+    Accuracy        : 0.5397
+    Macro F1        : 0.5336
+    Changed         : 143
+    Wrong -> Correct: 52
+    Correct -> Wrong: 60
 
   Boundary Policy:
-    Coverage                    : 0.7352
-    Boundary Rate               : 0.2648
-    Single Accuracy             : 0.6039
-    Boundary Top-2 Contains True: 0.8077
-
-  High-confidence Wrong:
-    Count                           : 322
-    Warm/Cool high-confidence wrong : 92
-    Saved to                        : C:\Users\k1s1t\Desktop\Project\Styleflow\Skin\personal_color_pipeline\outputs\high_confidence_wrong.csv
-
-  Best Policy:
-    By accuracy                : margin_pairwise_reranker
-    By weighted error          : margin_pairwise_reranker
-    Practical coverage >= 0.70 : margin_pairwise_reranker
+    Coverage                    : 0.4593
+    Boundary Rate               : 0.5407
+    Single Accuracy             : 0.6452
+    Boundary Top-2 Contains True: 0.7608
 ================================================================

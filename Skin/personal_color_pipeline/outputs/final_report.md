@@ -1,7 +1,7 @@
 
 # Personal Color Classifier - Final Report
 
-_Generated 2026-06-16 11:12_
+_Generated 2026-06-18 11:05_
 
 
 ## 1. 프로젝트 목표
@@ -11,7 +11,7 @@ _Generated 2026-06-16 11:12_
 ## 2. 데이터셋 요약
 
 - 총 샘플 수: 4910
-- 이미지 디렉토리: ../release/RGB
+- 이미지 디렉토리: ../release/RGB/RGB
 - 팔레트 CSV: ../personal_color_palette_full.csv
 
 | class | display | count |
@@ -32,8 +32,8 @@ _Generated 2026-06-16 11:12_
 
 ## 4. 사용 Feature 요약
 
-- Feature 수: 118
-- Shortcut 제거 모드: none
+- Feature 수: 114
+- Shortcut 제거 모드: all
 
 ## 5. 1~5차 실험 요약
 
@@ -45,28 +45,30 @@ _Generated 2026-06-16 11:12_
 | 4차 | warm/cool binary classifier, hard hierarchy, soft reranker, cost-aware 비교 | warm/cool 단독 macro F1 0.6954; soft reranker는 base를 못 이김 |
 | 5차 | margin+confidence 이중 게이트 pairwise reranker, boundary output, high-confidence wrong export, final policy 비교 | margin_pairwise_reranker가 base 대비 F1 +0.0133, acc +0.0132 개선 (단일 80/20 split) |
 
+참고 수치(단일 split): base acc=N/A  base F1=N/A  margin acc=N/A  margin F1=N/A
+
 ## 6. 6차 K-fold 검증 결과
 
-고정된 threshold로 3-fold Stratified CV 수행:
+고정된 threshold로 5-fold Stratified CV 수행:
 
 | policy | acc_mean | acc_std | macro_f1_mean | macro_f1_std | wc_acc_mean | wc_acc_std | weighted_error_mean | weighted_error_std | coverage_mean | single_accuracy_mean |
 |---|---|---|---|---|---|---|---|---|---|---|
-| base_4class | 0.5532 | 0.0081 | 0.5509 | 0.0074 | 0.6764 | 0.0041 | 1.0941 | 0.0093 | 1.0 | 0.5531564538267717 |
-| boundary_policy | 0.5532 | 0.0081 | 0.5509 | 0.0074 | 0.6764 | 0.0041 | 1.0941 | 0.0093 | 0.7584455633005892 | 0.5919202135105764 |
-| margin_pairwise_reranker | 0.5552 | 0.0018 | 0.5531 | 0.0009 | 0.6804 | 0.0091 | 1.0839 | 0.0188 | 1.0 | 0.5551930723852795 |
+| base_4class | 0.5448 | 0.0095 | 0.5424 | 0.0093 | 0.6633 | 0.0099 | 1.1285 | 0.0268 | 1.0 | 0.5448065173116089 |
+| boundary_policy | 0.5448 | 0.0095 | 0.5424 | 0.0093 | 0.6633 | 0.0099 | 1.1285 | 0.0268 | 0.7423625254582484 | 0.5748677367995768 |
+| margin_pairwise_reranker | 0.5393 | 0.0123 | 0.5366 | 0.0124 | 0.6629 | 0.0106 | 1.1348 | 0.0318 | 1.0 | 0.5393075356415479 |
 | top2_reference | nan | nan | nan | nan | nan | nan | nan | nan | nan | nan |
 
 
 ## 7. 최종 정책 선택 이유
 
-**채택 여부: margin_pairwise_reranker 채택**
+**채택 여부: base_4class 유지(margin_pairwise는 optional)**
 
-- base macro F1 평균: 0.5509380562556644
-- margin_pairwise macro F1 평균: 0.5531015620027229
-- base weighted error 평균: 1.094095685599764
-- margin_pairwise weighted error 평균: 1.0839128417369521
-- fold 승률: 0.6666666666666666 (2/3)
-- 판단 기준 충족 여부: {'macro_f1_higher': True, 'weighted_error_lower_or_equal': True, 'fold_win_rate_ge_0.6': True}
+- base macro F1 평균: 0.5424497729705298
+- margin_pairwise macro F1 평균: 0.5365953540135352
+- base weighted error 평균: 1.1285132382892056
+- margin_pairwise weighted error 평균: 1.1348268839103868
+- fold 승률: 0.0 (0/5)
+- 판단 기준 충족 여부: {'macro_f1_higher': False, 'weighted_error_lower_or_equal': False, 'fold_win_rate_ge_0.6': False}
 
 적용된 최종 정책(CLI `--final-policy`): **margin_pairwise**
 
@@ -74,20 +76,20 @@ _Generated 2026-06-16 11:12_
 
 | metric | base_4class | margin_pairwise_reranker |
 |---|---|---|
-| Accuracy | 0.5570264765784114 | 0.5610997963340122 |
-| Macro F1 | 0.5526089032004842 | 0.5559094540968377 |
-| Warm/Cool Acc | 0.6904276985743381 | 0.6914460285132383 |
-| Weighted Error | 1.0621181262729122 | 1.0560081466395113 |
+| Accuracy | 0.5437881873727087 | 0.5366598778004074 |
+| Macro F1 | 0.5398584218909962 | 0.5311468524761914 |
+| Warm/Cool Acc | 0.6659877800407332 | 0.6680244399185336 |
+| Weighted Error | 1.1242362525458247 | 1.1272912423625254 |
 
 선택된 threshold (validation split, metric=weighted_error_score):
-- pairwise_margin_threshold = 0.2
-- pairwise_confidence_threshold = 0.65
+- pairwise_margin_threshold = 0.12
+- pairwise_confidence_threshold = 0.5
 
 ## 9. Warm/Cool 오류 분석
 
-- Warm/Cool binary 모델 accuracy: 0.6908396946564885
-- Warm->Cool errors: 115
-- Cool->Warm errors: 128
+- Warm/Cool binary 모델 accuracy: 0.6755725190839694
+- Warm->Cool errors: 124
+- Cool->Warm errors: 131
 
 Warm/cool 모델은 69~70% 수준으로, 최종 예측을 뒤집는 1단계 결정기로 쓰기엔 부족하다고 판단 — 설명/경계형 판단/오류 분석용으로만 사용한다 (hard hierarchy/soft reranker는 기본 OFF).
 
@@ -95,29 +97,26 @@ Warm/cool 모델은 69~70% 수준으로, 최종 예측을 뒤집는 1단계 결�
 
 | pair | support | accuracy | macro_f1 | precision_class_a | recall_class_a | precision_class_b | recall_class_b | used_count_in_reranker | wrong_to_correct | correct_to_wrong | net_gain | warm_cool_crossing_pair |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| summer_cool__autumn_warm | 1555 | 0.8039 | 0.8027 | 0.7902097902097902 | 0.7847222222222222 | 0.8154761904761905 | 0.8203592814371258 | 21 | 4 | 0 | 4 | True |
-| spring_warm__autumn_warm | 1587 | 0.7862 | 0.7857 | 0.7712418300653595 | 0.7814569536423841 | 0.8 | 0.7904191616766467 | 24 | 3 | 1 | 2 | False |
-| summer_cool__winter_cool | 1555 | 0.8553 | 0.8547 | 0.8367346938775511 | 0.8541666666666666 | 0.8719512195121951 | 0.8562874251497006 | 10 | 2 | 2 | 0 | False |
-| spring_warm__summer_cool | 1476 | 0.6791 | 0.6767 | 0.6647058823529411 | 0.7483443708609272 | 0.6984126984126984 | 0.6068965517241379 | 33 | 5 | 5 | 0 | True |
-| autumn_warm__winter_cool | 1666 | 0.7006 | 0.7006 | 0.7005988023952096 | 0.7005988023952096 | 0.7005988023952096 | 0.7005988023952096 | 47 | 8 | 9 | -1 | True |
-| spring_warm__winter_cool | 1587 | 0.8428 | 0.8417 | 0.8581560283687943 | 0.8013245033112583 | 0.8305084745762712 | 0.8802395209580839 | 8 | 0 | 1 | -1 | True |
+| autumn_warm__winter_cool | 1666 | 0.6946 | 0.6937 | 0.7181208053691275 | 0.6407185628742516 | 0.6756756756756757 | 0.7485029940119761 | 21 | 6 | 4 | 2 | True |
+| spring_warm__winter_cool | 1587 | 0.8365 | 0.8352 | 0.8561151079136691 | 0.7880794701986755 | 0.8212290502793296 | 0.8802395209580839 | 6 | 2 | 1 | 1 | True |
+| summer_cool__autumn_warm | 1555 | 0.8071 | 0.8060 | 0.7916666666666666 | 0.7916666666666666 | 0.8203592814371258 | 0.8203592814371258 | 10 | 0 | 0 | 0 | True |
+| spring_warm__summer_cool | 1476 | 0.6622 | 0.6606 | 0.6545454545454545 | 0.7152317880794702 | 0.6717557251908397 | 0.6068965517241379 | 28 | 4 | 6 | -2 | True |
+| spring_warm__autumn_warm | 1587 | 0.8019 | 0.8013 | 0.7933333333333333 | 0.7880794701986755 | 0.8095238095238095 | 0.8143712574850299 | 13 | 1 | 4 | -3 | False |
+| summer_cool__winter_cool | 1555 | 0.8585 | 0.8582 | 0.8289473684210527 | 0.875 | 0.8867924528301887 | 0.844311377245509 | 14 | 1 | 6 | -5 | False |
 
 
 ## 10. Boundary Output 정책
 
-- Coverage: 0.7189409368635438
-- Boundary rate: 0.28105906313645623
-- Single accuracy (coverage 내 정확도): 0.5892351274787535
+- Coverage: 0.6832993890020367
+- Boundary rate: 0.3167006109979633
+- Single accuracy (coverage 내 정확도): 0.5916542473919523
 - Boundary top-2 contains true: N/A
 
 Boundary 정책은 top-1 정확도 자체를 올리지 않지만, 확신이 낮은 샘플에 대해 단일 답을 강제하지 않고 후보 2개 또는 "경계형" 표시를 제공해 서비스 UX 신뢰도를 높인다.
 
 ## 11. High-confidence Wrong 감사 결과
 
-- High-confidence wrong 샘플 수: 349
-- Warm/Cool high-confidence wrong 샘플 수: 94
-- 리뷰 템플릿: C:\Users\k1s1t\Desktop\Project\Styleflow\Skin\personal_color_pipeline\outputs\label_audit\audit_review_template.csv
-- 복사된 이미지 수: 50
+_이번 실행에서 label audit을 수행하지 않음 (--run-label-audit 미지정)._
 
 ## 12. 알려진 한계
 

@@ -1156,7 +1156,7 @@ def _run_white_balance_comparison(
     print(f"{'='*60}")
 
     rows = []
-    for wb in ["none", "gray_world"]:
+    for wb in ["none", "gray_world", "sclera"]:
         print(f"\n  -- white_balance={wb} --")
         df_wb = build_person_features(args.image_dir, no_cache=args.no_cache, wb=wb)
         df_wb = add_palette_distances(df_wb, prototypes)
@@ -1399,7 +1399,8 @@ def _build_final_model_bundle(
     with open(bundle_dir / "label_mapping.json", "w", encoding="utf-8") as f:
         json.dump(label_mapping, f, indent=2, ensure_ascii=False)
 
-    for fname in ["palette_prototypes_4class.json", "palette_axis_prototypes_4class.json"]:
+    for fname in ["palette_prototypes.json", "palette_axis_prototypes.json",
+                  "palette_prototypes_4class.json", "palette_axis_prototypes_4class.json"]:
         src = OUTPUTS_DIR / fname
         if src.exists():
             shutil.copy2(src, bundle_dir / fname)
@@ -1509,7 +1510,7 @@ def _parse_args() -> argparse.Namespace:
 
     # White balance (preserved)
     p.add_argument("--white-balance", default="none",
-                   choices=["none", "gray_world"])
+                   choices=["none", "gray_world", "sclera"])
 
     # Axis normalisation (preserved, reserved)
     p.add_argument("--normalize-axis", action="store_true")
